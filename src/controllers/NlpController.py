@@ -22,22 +22,41 @@ class NlpController(BaseController):
 
         # Delete the old collection if reset is requested
         if do_reset == 1:
-            self.vectordb_client.delete_collection(collection_name)
+            try:
+                self.vectordb_client.delete_collection(collection_name)
+            except Exception as e:
+                print(f"[WARN] delete_collection failed: {e}")
 
         # Create the collection using the embedding model's vector size
-        self.vectordb_client.create_collection(
+        if not self.vectordb_client.collection_exists(collection_name):
+            self.vectordb_client.create_collection(
             collection_name=collection_name,
             embedding_size=self.embedding_client.embedding_size
-        )
+            )
 
         # Embed each chunk and collect the vectors
-        texts = [chunk.chunk_text for chunk in chunks]
-        metadata = [chunk.chunk_metadata for chunk in chunks]
+        valid_chunks = [
+            chunk for chunk in chunks
+            if chunk.chunk_text and chunk.chunk_text.strip()
+        ]
+        texts = [
+            " ".join(chunk.chunk_text.split())
+            for chunk in valid_chunks
+        ]
+        metadata = [
+            chunk.chunk_metadata
+            for chunk in valid_chunks
+        ]
         vectors = [
             self.embedding_client.embed(text, doc_type="passage")
             for text in texts
         ]
 
+        if not (len(texts) == len(vectors) == len(metadata)):
+            raise ValueError(
+            f"Embedding alignment mismatch: "
+            f"texts={len(texts)}, vectors={len(vectors)}, metadata={len(metadata)}"
+            )
         # Store everything in Qdrant
         self.vectordb_client.add_documents(
             collection_name=collection_name,
@@ -45,8 +64,8 @@ class NlpController(BaseController):
             vectors=vectors,
             metadata=metadata
         )
-
-        return len(chunks)
+        
+        return len(texts)
 
     def search(self, project_id: str, query: str, top_k: int = 5):
         collection_name = self.get_collection_name(project_id)
