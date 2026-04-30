@@ -28,7 +28,7 @@ class NlpController(BaseController):
                 print(f"[WARN] delete_collection failed: {e}")
 
         # Create the collection using the embedding model's vector size
-        if not self.vectordb_client.collection_exists(collection_name):
+        if not self.vectordb_client.is_collection_exists(collection_name):
             self.vectordb_client.create_collection(
             collection_name=collection_name,
             embedding_size=self.embedding_client.embedding_size
