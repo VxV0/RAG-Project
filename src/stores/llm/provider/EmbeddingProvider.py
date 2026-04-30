@@ -21,9 +21,7 @@ class EmbeddingProvider(LLMInterface):
             raise ValueError(f"Invalid doc_type: {doc_type}")
             
         if not text or not text.strip():
-            raise ValueError("Cannot embed empty text")
-        #Split words by all whitespaces and join them together separated by a space    
-        text = " ".join(text.split())    
+            raise ValueError("Cannot embed empty text")   
         
         prefix = "query: " if doc_type == "query" else "passage: "
         text = f"{prefix}{text}"
